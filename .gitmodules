@@ -1,0 +1,3 @@
+[submodule "chatterbox"]
+	path = chatterbox
+	url = https://github.com/resemble-ai/chatterbox
