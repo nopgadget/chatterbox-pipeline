@@ -22,12 +22,75 @@ from chatterbox.tts_turbo import ChatterboxTurboTTS
 # Configuration
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 MODEL_CACHE = {}
+VOICE_FOLDER = Path("voice")
+AVAILABLE_VOICES = {}
 
 # Supported paralinguistic tags
 EVENT_TAGS = [
     "[clear throat]", "[sigh]", "[shush]", "[cough]", "[groan]",
     "[sniff]", "[gasp]", "[chuckle]", "[laugh]"
 ]
+
+def scan_voice_folder():
+    """Scan voice folder for available voice files at startup"""
+    global AVAILABLE_VOICES
+    AVAILABLE_VOICES = {}
+    
+    if not VOICE_FOLDER.exists():
+        VOICE_FOLDER.mkdir(exist_ok=True)
+        print(f"Created voice folder: {VOICE_FOLDER}")
+        return
+    
+    # Scan for audio files
+    audio_extensions = {'.wav', '.mp3', '.flac', '.ogg', '.m4a'}
+    for file_path in VOICE_FOLDER.iterdir():
+        if file_path.is_file() and file_path.suffix.lower() in audio_extensions:
+            # Store both with and without extension for easy lookup
+            name_with_ext = file_path.name
+            name_without_ext = file_path.stem
+            full_path = str(file_path.resolve())
+            
+            AVAILABLE_VOICES[name_with_ext] = full_path
+            AVAILABLE_VOICES[name_without_ext] = full_path
+    
+    if AVAILABLE_VOICES:
+        print(f"Found {len(set(AVAILABLE_VOICES.values()))} voice file(s) in {VOICE_FOLDER}:")
+        for name in sorted(set(AVAILABLE_VOICES.values())):
+            print(f"  - {Path(name).name}")
+    else:
+        print(f"No voice files found in {VOICE_FOLDER}")
+
+def resolve_voice_path(voice_name: Optional[str] = None, audio_prompt_path: Optional[str] = None) -> Optional[str]:
+    """
+    Resolve voice path from voice_name or audio_prompt_path.
+    Priority: uploaded file > voice_name > audio_prompt_path
+    """
+    # If audio_prompt_path is provided and exists, use it (for custom uploads)
+    if audio_prompt_path and os.path.exists(audio_prompt_path):
+        return audio_prompt_path
+    
+    # If voice_name is provided, look it up in available voices
+    if voice_name:
+        # Try exact match first
+        if voice_name in AVAILABLE_VOICES:
+            return AVAILABLE_VOICES[voice_name]
+        # Try with .wav extension
+        if f"{voice_name}.wav" in AVAILABLE_VOICES:
+            return AVAILABLE_VOICES[f"{voice_name}.wav"]
+        # Try case-insensitive match
+        voice_name_lower = voice_name.lower()
+        for key, path in AVAILABLE_VOICES.items():
+            if key.lower() == voice_name_lower or key.lower() == f"{voice_name_lower}.wav":
+                return path
+    
+    # Fall back to audio_prompt_path if provided
+    if audio_prompt_path:
+        return audio_prompt_path
+    
+    return None
+
+# Scan voice folder at startup
+scan_voice_folder()
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -46,7 +109,8 @@ class TTSRequest(BaseModel):
     min_p: float = Field(0.0, ge=0.0, le=1.0, description="Min-p sampling (0 to disable)")
     norm_loudness: bool = Field(True, description="Normalize loudness to -27 LUFS")
     seed: Optional[int] = Field(None, description="Random seed (None for random)")
-    audio_prompt_path: Optional[str] = Field(None, description="Path to reference audio file (if using file upload, use /api/tts/upload endpoint)")
+    voice_name: Optional[str] = Field(None, description="Name of voice file from voice/ folder (e.g., '20secondchris' or '20secondchris.wav'). Use /api/voices to list available voices.")
+    audio_prompt_path: Optional[str] = Field(None, description="Path to reference audio file (if using file upload, use /api/tts/upload endpoint). Ignored if voice_name is provided.")
 
 class TTSResponse(BaseModel):
     success: bool
@@ -181,6 +245,25 @@ async def read_root():
             border: 2px dashed #e0e0e0;
             border-radius: 8px;
             cursor: pointer;
+        }
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            background: white;
+            cursor: pointer;
+        }
+        select:focus {
+            outline: none;
+            border-color: #000000;
+        }
+        .voice-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
         }
         .slider-group {
             display: grid;
@@ -358,7 +441,15 @@ async def read_root():
                 </div>
                 
                 <div class="form-group">
-                    <label for="audioFile">Reference Audio File (Optional)</label>
+                    <label for="voiceSelect">Voice Selection</label>
+                    <select id="voiceSelect" name="voiceSelect">
+                        <option value="">Loading voices...</option>
+                    </select>
+                    <div class="voice-info">Select a server-side voice for faster generation, or upload your own below.</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="audioFile">Or Upload Custom Audio File (Optional)</label>
                     <input type="file" id="audioFile" name="audioFile" accept="audio/*">
                 </div>
                 
@@ -423,11 +514,39 @@ async def read_root():
                 <h3>API Documentation</h3>
                 <p>Access the API at <code>/docs</code> for interactive API documentation.</p>
                 <p>POST to <code>/api/tts</code> with JSON body or use <code>/api/tts/upload</code> for file uploads.</p>
+                <p>Use <code>/api/voices</code> to list available server-side voices for faster generation.</p>
             </div>
         </div>
     </div>
     
     <script>
+        // Load available voices
+        async function loadVoices() {
+            try {
+                const response = await fetch('/api/voices');
+                const data = await response.json();
+                const voiceSelect = document.getElementById('voiceSelect');
+                voiceSelect.innerHTML = '<option value="">None (use uploaded file)</option>';
+                
+                if (data.voices && data.voices.length > 0) {
+                    data.voices.forEach(voice => {
+                        const option = document.createElement('option');
+                        option.value = voice;
+                        option.textContent = voice;
+                        voiceSelect.appendChild(option);
+                    });
+                } else {
+                    voiceSelect.innerHTML = '<option value="">No voices available</option>';
+                }
+            } catch (err) {
+                console.error('Failed to load voices:', err);
+                document.getElementById('voiceSelect').innerHTML = '<option value="">Error loading voices</option>';
+            }
+        }
+        
+        // Load voices on page load
+        loadVoices();
+        
         // Initialize paralinguistic tags
         const tags = ["[clear throat]", "[sigh]", "[shush]", "[cough]", "[groan]", "[sniff]", "[gasp]", "[chuckle]", "[laugh]"];
         const tagsContainer = document.getElementById('tagsContainer');
@@ -504,8 +623,10 @@ async def read_root():
             
             try {
                 let response;
+                const voiceName = document.getElementById('voiceSelect').value;
+                
                 if (audioFile) {
-                    // Use upload endpoint
+                    // Use upload endpoint (uploaded file takes priority)
                     const uploadData = new FormData();
                     uploadData.append('text', formData.get('text'));
                     uploadData.append('audio_file', audioFile);
@@ -522,8 +643,26 @@ async def read_root():
                         method: 'POST',
                         body: uploadData
                     });
+                } else if (voiceName) {
+                    // Use upload endpoint with voice_name (no file upload)
+                    const uploadData = new FormData();
+                    uploadData.append('text', formData.get('text'));
+                    uploadData.append('voice_name', voiceName);
+                    uploadData.append('temperature', formData.get('temperature'));
+                    uploadData.append('top_p', formData.get('top_p'));
+                    uploadData.append('top_k', formData.get('top_k'));
+                    uploadData.append('repetition_penalty', formData.get('repetition_penalty'));
+                    uploadData.append('min_p', formData.get('min_p'));
+                    uploadData.append('norm_loudness', formData.get('norm_loudness') ? 'true' : 'false');
+                    const seed = formData.get('seed');
+                    if (seed && seed !== '0') uploadData.append('seed', seed);
+                    
+                    response = await fetch('/api/tts/upload', {
+                        method: 'POST',
+                        body: uploadData
+                    });
                 } else {
-                    // Use JSON endpoint
+                    // Use JSON endpoint (no voice specified)
                     const jsonData = {
                         text: formData.get('text'),
                         temperature: parseFloat(formData.get('temperature')),
@@ -535,6 +674,7 @@ async def read_root():
                     };
                     const seed = formData.get('seed');
                     if (seed && seed !== '0') jsonData.seed = parseInt(seed);
+                    if (voiceName) jsonData.voice_name = voiceName;
                     
                     response = await fetch('/api/tts', {
                         method: 'POST',
@@ -577,9 +717,12 @@ async def generate_tts(request: TTSRequest):
         if request.seed is not None and request.seed != 0:
             set_seed(request.seed)
         
+        # Resolve voice path (voice_name takes priority over audio_prompt_path)
+        audio_prompt_path = resolve_voice_path(request.voice_name, request.audio_prompt_path)
+        
         wav = model.generate(
             text=request.text,
-            audio_prompt_path=request.audio_prompt_path,
+            audio_prompt_path=audio_prompt_path,
             temperature=request.temperature,
             top_p=request.top_p,
             top_k=request.top_k,
@@ -611,6 +754,7 @@ async def generate_tts(request: TTSRequest):
 async def generate_tts_upload(
     text: str = Form(...),
     audio_file: UploadFile = File(None),
+    voice_name: Optional[str] = Form(None),
     temperature: float = Form(0.8),
     top_p: float = Form(0.95),
     top_k: int = Form(1000),
@@ -619,7 +763,7 @@ async def generate_tts_upload(
     norm_loudness: bool = Form(True),
     seed: Optional[str] = Form(None),
 ):
-    """Generate TTS audio with file upload support"""
+    """Generate TTS audio with file upload support. Can use voice_name from server or upload custom audio."""
     try:
         model = get_model()
         
@@ -633,13 +777,19 @@ async def generate_tts_upload(
             except (ValueError, TypeError):
                 pass
         
-        # Save uploaded file temporarily if provided
+        # Priority: uploaded file > voice_name > None
         audio_prompt_path = None
         if audio_file:
+            # Save uploaded file temporarily if provided
             with tempfile.NamedTemporaryFile(delete=False, suffix=Path(audio_file.filename).suffix) as tmp_file:
                 content = await audio_file.read()
                 tmp_file.write(content)
                 audio_prompt_path = tmp_file.name
+        elif voice_name:
+            # Use server-side voice if no file uploaded
+            audio_prompt_path = resolve_voice_path(voice_name, None)
+            if not audio_prompt_path:
+                raise HTTPException(status_code=404, detail=f"Voice '{voice_name}' not found. Use /api/voices to list available voices.")
         
         try:
             wav = model.generate(
@@ -690,6 +840,22 @@ async def health_check():
 async def get_tags():
     """Get list of supported paralinguistic tags"""
     return {"tags": EVENT_TAGS}
+
+@app.get("/api/voices")
+async def get_voices():
+    """Get list of available voice files from voice/ folder"""
+    # Return unique voice names (without duplicates from extension variations)
+    unique_voices = {}
+    for key, path in AVAILABLE_VOICES.items():
+        if key.endswith('.wav'):
+            unique_voices[key] = path
+        elif f"{key}.wav" not in AVAILABLE_VOICES:
+            unique_voices[key] = path
+    
+    return {
+        "voices": sorted(unique_voices.keys()),
+        "count": len(set(AVAILABLE_VOICES.values()))
+    }
 
 if __name__ == "__main__":
     import argparse

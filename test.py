@@ -10,7 +10,7 @@ model = ChatterboxTurboTTS.from_pretrained(device="cuda")
 text = "Hi there [clear throat]..., this is Chris... Do you have a sec? [sniff] ... I really need 400 row-bucks [cough] ... added to my row-blocks account."
 
 # Generate audio (requires a reference clip for voice cloning)
-wav = model.generate(text, audio_prompt_path="../20secondchris.wav", cfg_weight=0.3)
+wav = model.generate(text, audio_prompt_path="voice/20secondchris.wav", cfg_weight=0.3)
 
 # Convert to numpy if it's a tensor
 if isinstance(wav, torch.Tensor):

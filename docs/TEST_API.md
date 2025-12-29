@@ -5,7 +5,7 @@
 Run this PowerShell command to test the API:
 
 ```powershell
-curl.exe -X POST "http://localhost:8000/api/tts/upload" -F "text=Hi there [clear throat]..., this is Chris... Do you have a sec? [sniff] ... I really need 400 row-bucks [cough] ... added to my row-blocks account." -F "audio_file=@../20secondchris.wav" -F "temperature=0.8" -F "top_p=0.95" -F "top_k=1000" -F "repetition_penalty=1.2" -F "min_p=0.0" -F "norm_loudness=true" --output test_output.wav
+curl.exe -X POST "http://localhost:8000/api/tts/upload" -F "text=Hi there [clear throat]..., this is Chris... Do you have a sec? [sniff] ... I really need 400 row-bucks [cough] ... added to my row-blocks account." -F "audio_file=@voice/20secondchris.wav" -F "temperature=0.8" -F "top_p=0.95" -F "top_k=1000" -F "repetition_penalty=1.2" -F "min_p=0.0" -F "norm_loudness=true" --output test_output.wav
 ```
 
 ## Using the Script
