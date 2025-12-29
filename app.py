@@ -532,10 +532,14 @@ async def read_root():
                 
                 if (data.voices && data.voices.length > 0) {
                     voiceSelect.innerHTML = '<option value="">None (use uploaded file)</option>';
-                    data.voices.forEach(voice => {
+                    data.voices.forEach((voice, index) => {
                         const option = document.createElement('option');
                         option.value = voice;
                         option.textContent = voice;
+                        // Select the first voice by default
+                        if (index === 0) {
+                            option.selected = true;
+                        }
                         voiceSelect.appendChild(option);
                     });
                 } else {
@@ -614,7 +618,16 @@ async def read_root():
             
             try {
                 let response;
-                const voiceName = document.getElementById('voiceSelect').value;
+                let voiceName = document.getElementById('voiceSelect').value;
+                
+                // If no voice selected and no file uploaded, use first available voice
+                if (!voiceName && !audioFile) {
+                    const voiceSelect = document.getElementById('voiceSelect');
+                    const firstVoiceOption = voiceSelect.querySelector('option[value]:not([value=""])');
+                    if (firstVoiceOption) {
+                        voiceName = firstVoiceOption.value;
+                    }
+                }
                 
                 if (audioFile) {
                     // Use upload endpoint (uploaded file takes priority)
