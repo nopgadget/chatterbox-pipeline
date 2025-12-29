@@ -32,7 +32,9 @@ EVENT_TAGS = [
 ]
 
 def scan_voice_folder():
-    """Scan voice folder for available voice files at startup"""
+    """Scan voice folder for available voice files at startup.
+    NOTE: This function only READS from the voice folder - it NEVER deletes or modifies files.
+    """
     global AVAILABLE_VOICES
     AVAILABLE_VOICES = {}
     
@@ -41,7 +43,7 @@ def scan_voice_folder():
         print(f"Created voice folder: {VOICE_FOLDER}")
         return
     
-    # Scan for audio files
+    # Scan for audio files (READ-ONLY - never deletes or modifies files)
     audio_extensions = {'.wav', '.mp3', '.flac', '.ogg', '.m4a'}
     for file_path in VOICE_FOLDER.iterdir():
         if file_path.is_file() and file_path.suffix.lower() in audio_extensions:
@@ -169,48 +171,69 @@ async def read_root():
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #ffffff;
-            min-height: 100vh;
-            padding: 20px;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            border: 1px solid #e0e0e0;
+            background: #f5f5f5;
+            height: 100vh;
+            padding: 15px;
             overflow: hidden;
         }
         .header {
-            background: #000000;
-            color: white;
-            padding: 30px;
+            background: #ffffff;
+            color: #000000;
+            border: 2px solid #000000;
+            padding: 15px;
             text-align: center;
+            margin-bottom: 15px;
+            border-radius: 8px;
         }
-        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
-        .header p { opacity: 0.9; }
-        .content {
-            padding: 30px;
+        .header h1 { font-size: 1.6em; }
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 15px;
+            max-width: 1400px;
+            margin: 0 auto;
+            height: calc(100vh - 90px);
+        }
+        .box {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 0;
+        }
+        .box h2 {
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            color: #333;
+            border-bottom: 2px solid #000;
+            padding-bottom: 6px;
+            flex-shrink: 0;
         }
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 12px;
+            flex-shrink: 0;
         }
         label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             font-weight: 600;
             color: #333;
+            font-size: 0.9em;
         }
         textarea {
             width: 100%;
-            min-height: 120px;
-            padding: 12px;
+            flex: 1;
+            min-height: 100px;
+            padding: 10px;
             border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 16px;
+            border-radius: 6px;
+            font-size: 14px;
             font-family: inherit;
-            resize: vertical;
+            resize: none;
         }
         textarea:focus {
             outline: none;
@@ -219,20 +242,26 @@ async def read_root():
         .tags-container {
             display: flex;
             flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 10px;
+            gap: 3px;
+            margin-top: 6px;
+            max-height: 60px;
+            overflow-y: auto;
+            width: 100%;
+            align-items: flex-start;
         }
         .tag-btn {
-            padding: 4px 10px;
+            padding: 2px 6px;
             background: #ffffff;
             border: 1px solid #000000;
             color: #000000;
-            border-radius: 4px;
+            border-radius: 3px;
             cursor: pointer;
-            font-size: 11px;
+            font-size: 9px;
             transition: all 0.2s;
             white-space: nowrap;
+            flex: 0 0 auto;
             width: auto;
+            max-width: none;
             display: inline-block;
         }
         .tag-btn:hover {
@@ -241,17 +270,18 @@ async def read_root():
         }
         input[type="file"] {
             width: 100%;
-            padding: 10px;
+            padding: 8px;
             border: 2px dashed #e0e0e0;
-            border-radius: 8px;
+            border-radius: 6px;
             cursor: pointer;
+            font-size: 0.85em;
         }
         select {
             width: 100%;
-            padding: 10px;
+            padding: 8px;
             border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
+            border-radius: 6px;
+            font-size: 0.9em;
             font-family: inherit;
             background: white;
             cursor: pointer;
@@ -261,97 +291,99 @@ async def read_root():
             border-color: #000000;
         }
         .voice-info {
-            font-size: 12px;
+            font-size: 0.75em;
             color: #666;
-            margin-top: 5px;
+            margin-top: 4px;
         }
         .slider-group {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 8px;
         }
         .slider-item {
             display: flex;
             flex-direction: column;
         }
         .slider-item label {
-            margin-bottom: 5px;
+            margin-bottom: 3px;
+            font-size: 0.8em;
         }
         input[type="range"] {
             width: 100%;
-            margin: 10px 0;
+            margin: 4px 0;
         }
         .slider-value {
-            font-size: 14px;
+            font-size: 0.8em;
             color: #666;
-            margin-top: 5px;
+            margin-top: 2px;
         }
         input[type="number"] {
             width: 100%;
-            padding: 10px;
+            padding: 6px;
             border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
+            border-radius: 6px;
+            font-size: 0.9em;
         }
         input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
+            width: 18px;
+            height: 18px;
             cursor: pointer;
         }
         .checkbox-group {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+            font-size: 0.9em;
         }
         button {
-            background: #000000;
-            color: white;
-            border: 1px solid #000000;
-            padding: 15px 30px;
-            font-size: 18px;
+            background: #ffffff;
+            color: #000000;
+            border: 2px solid #000000;
+            padding: 12px 20px;
+            font-size: 1em;
             font-weight: 600;
-            border-radius: 8px;
+            border-radius: 6px;
             cursor: pointer;
             width: 100%;
-            margin-top: 20px;
+            margin-top: 10px;
             transition: all 0.2s;
         }
         button:hover {
-            background: #333333;
+            background: #f5f5f5;
         }
         button:disabled {
             opacity: 0.6;
             cursor: not-allowed;
         }
         .audio-output {
-            margin-top: 30px;
-            padding: 20px;
-            background: #ffffff;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
         .audio-output h3 {
-            margin-bottom: 15px;
+            margin-bottom: 10px;
+            font-size: 1em;
         }
         audio {
             width: 100%;
-            margin-top: 10px;
+            margin-top: 8px;
         }
         .loading {
             display: none;
             text-align: center;
-            padding: 20px;
+            padding: 15px;
         }
         .loading.active {
             display: block;
         }
         .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #000000;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #000000;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            width: 30px;
+            height: 30px;
             animation: spin 1s linear infinite;
             margin: 0 auto;
         }
@@ -363,158 +395,126 @@ async def read_root():
             background: #f5f5f5;
             color: #000000;
             border: 1px solid #000000;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 20px;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
             display: none;
+            font-size: 0.85em;
         }
         .error.active {
             display: block;
         }
-        .api-info {
-            background: #ffffff;
-            border: 1px solid #e0e0e0;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 30px;
+        .scrollable {
+            overflow-y: auto;
+            flex: 1;
+            min-height: 0;
         }
-        .api-info h3 {
-            margin-bottom: 10px;
+        .download-link {
+            margin-top: 8px;
+            color: #000;
+            text-decoration: none;
+            font-size: 0.9em;
+            display: inline-block;
         }
-        .api-info code {
-            background: #f5f5f5;
-            border: 1px solid #e0e0e0;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: monospace;
-        }
-        .accordion {
-            margin-top: 20px;
-        }
-        .accordion-header {
-            background: #f5f5f5;
-            padding: 15px;
-            cursor: pointer;
-            border-radius: 8px;
-            font-weight: 600;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border: 1px solid #e0e0e0;
-        }
-        .accordion-header:hover {
-            background: #e8e8e8;
-        }
-        .accordion-content {
-            display: none;
-            padding: 20px;
-            background: #ffffff;
-            border-radius: 0 0 8px 8px;
-            border: 1px solid #e0e0e0;
-            border-top: none;
-        }
-        .accordion-content.active {
-            display: block;
+        .download-link:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>Chatterbox Turbo TTS</h1>
-        </div>
-        <div class="content">
+    <div class="header">
+        <h1>Chatterbox Turbo TTS</h1>
+    </div>
+    
+    <div class="grid-container">
+        <!-- Box 1: Text Input -->
+        <div class="box">
+            <h2>Text Input</h2>
             <form id="ttsForm">
-                <div class="form-group">
+                <div class="form-group" style="flex: 1; display: flex; flex-direction: column;">
                     <label for="text">Text to Synthesize</label>
                     <textarea id="text" name="text" placeholder="Enter your text here... You can use paralinguistic tags like [cough], [laugh], [chuckle], etc.">Hi there [clear throat]..., this is Chris... Do you have a sec? [sniff] ... I really need 400 row-bucks [cough] ... added to my row-blocks account.</textarea>
                 </div>
-                
-                <div class="accordion">
-                    <div class="accordion-header" onclick="toggleTagsAccordion()">
-                        <span>Paralinguistic Tags</span>
-                        <span id="tagsAccordionIcon">▼</span>
-                    </div>
-                    <div class="accordion-content" id="tagsAccordionContent">
-                        <div class="tags-container" id="tagsContainer"></div>
-                    </div>
+                <div class="form-group" style="flex-shrink: 0;">
+                    <label style="font-size: 0.85em;">Paralinguistic Tags</label>
+                    <div class="tags-container" id="tagsContainer"></div>
                 </div>
-                
+                <button type="submit" id="generateBtn">Generate</button>
+            </form>
+        </div>
+        
+        <!-- Box 2: Voice Selection -->
+        <div class="box">
+            <h2>Voice Selection</h2>
+            <div class="scrollable">
                 <div class="form-group">
-                    <label for="voiceSelect">Voice Selection</label>
+                    <label for="voiceSelect">Server-Side Voice</label>
                     <select id="voiceSelect" name="voiceSelect">
                         <option value="">Loading voices...</option>
                     </select>
-                    <div class="voice-info">Select a server-side voice for faster generation, or upload your own below.</div>
+                    <div class="voice-info">Select a voice for faster generation</div>
                 </div>
                 
                 <div class="form-group">
-                    <label for="audioFile">Or Upload Custom Audio File (Optional)</label>
+                    <label for="audioFile">Or Upload Custom Audio</label>
                     <input type="file" id="audioFile" name="audioFile" accept="audio/*">
                 </div>
                 
-                <div class="accordion">
-                    <div class="accordion-header" onclick="toggleAccordion()">
-                        <span>Advanced Options</span>
-                        <span id="accordionIcon">▼</span>
-                    </div>
-                    <div class="accordion-content" id="accordionContent">
-                        <div class="slider-group">
-                            <div class="slider-item">
-                                <label for="temperature">Temperature: <span class="slider-value" id="tempValue">0.8</span></label>
-                                <input type="range" id="temperature" name="temperature" min="0.05" max="2.0" step="0.05" value="0.8">
-                            </div>
-                            <div class="slider-item">
-                                <label for="top_p">Top P: <span class="slider-value" id="topPValue">0.95</span></label>
-                                <input type="range" id="top_p" name="top_p" min="0.0" max="1.0" step="0.01" value="0.95">
-                            </div>
-                            <div class="slider-item">
-                                <label for="top_k">Top K: <span class="slider-value" id="topKValue">1000</span></label>
-                                <input type="range" id="top_k" name="top_k" min="0" max="1000" step="10" value="1000">
-                            </div>
-                            <div class="slider-item">
-                                <label for="repetition_penalty">Repetition Penalty: <span class="slider-value" id="repPenValue">1.2</span></label>
-                                <input type="range" id="repetition_penalty" name="repetition_penalty" min="1.0" max="2.0" step="0.05" value="1.2">
-                            </div>
-                            <div class="slider-item">
-                                <label for="min_p">Min P: <span class="slider-value" id="minPValue">0.0</span></label>
-                                <input type="range" id="min_p" name="min_p" min="0.0" max="1.0" step="0.01" value="0.0">
-                            </div>
-                            <div class="slider-item">
-                                <label for="seed">Seed (0 for random): <span class="slider-value" id="seedValue">0</span></label>
-                                <input type="number" id="seed" name="seed" value="0" min="0">
-                            </div>
-                        </div>
-                        <div class="checkbox-group" style="margin-top: 15px;">
-                            <input type="checkbox" id="norm_loudness" name="norm_loudness" checked>
-                            <label for="norm_loudness" style="margin: 0;">Normalize Loudness (-27 LUFS)</label>
-                        </div>
-                    </div>
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 8px; font-size: 0.9em;">Generating...</p>
                 </div>
                 
-                <button type="submit" id="generateBtn">Generate ⚡</button>
-            </form>
-            
-            <div class="loading" id="loading">
-                <div class="spinner"></div>
-                <p style="margin-top: 10px;">Generating audio...</p>
+                <div class="error" id="error"></div>
             </div>
-            
-            <div class="error" id="error"></div>
-            
+        </div>
+        
+        <!-- Box 3: Settings -->
+        <div class="box">
+            <h2>Settings</h2>
+            <div class="scrollable">
+                <div class="slider-group">
+                    <div class="slider-item">
+                        <label for="temperature">Temperature: <span class="slider-value" id="tempValue">0.8</span></label>
+                        <input type="range" id="temperature" name="temperature" min="0.05" max="2.0" step="0.05" value="0.8">
+                    </div>
+                    <div class="slider-item">
+                        <label for="top_p">Top P: <span class="slider-value" id="topPValue">0.95</span></label>
+                        <input type="range" id="top_p" name="top_p" min="0.0" max="1.0" step="0.01" value="0.95">
+                    </div>
+                    <div class="slider-item">
+                        <label for="top_k">Top K: <span class="slider-value" id="topKValue">1000</span></label>
+                        <input type="range" id="top_k" name="top_k" min="0" max="1000" step="10" value="1000">
+                    </div>
+                    <div class="slider-item">
+                        <label for="repetition_penalty">Repetition Penalty: <span class="slider-value" id="repPenValue">1.2</span></label>
+                        <input type="range" id="repetition_penalty" name="repetition_penalty" min="1.0" max="2.0" step="0.05" value="1.2">
+                    </div>
+                    <div class="slider-item">
+                        <label for="min_p">Min P: <span class="slider-value" id="minPValue">0.0</span></label>
+                        <input type="range" id="min_p" name="min_p" min="0.0" max="1.0" step="0.01" value="0.0">
+                    </div>
+                    <div class="slider-item">
+                        <label for="seed">Seed: <span class="slider-value" id="seedValue">0</span></label>
+                        <input type="number" id="seed" name="seed" value="0" min="0">
+                    </div>
+                </div>
+                <div class="checkbox-group" style="margin-top: 8px;">
+                    <input type="checkbox" id="norm_loudness" name="norm_loudness" checked>
+                    <label for="norm_loudness" style="margin: 0; font-size: 0.85em;">Normalize Loudness (-27 LUFS)</label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Box 4: Output -->
+        <div class="box">
+            <h2>Output</h2>
             <div class="audio-output" id="audioOutput" style="display: none;">
-                <h3>Generated Audio</h3>
                 <audio id="audioPlayer" controls></audio>
-                <p style="margin-top: 10px; color: #666;">
-                    <a id="downloadLink" href="#" download="output.wav">Download Audio</a>
-                </p>
+                <a id="downloadLink" href="#" download="output.wav" class="download-link">Download Audio</a>
             </div>
-            
-            <div class="api-info">
-                <h3>API Documentation</h3>
-                <p>Access the API at <code>/docs</code> for interactive API documentation.</p>
-                <p>POST to <code>/api/tts</code> with JSON body or use <code>/api/tts/upload</code> for file uploads.</p>
-                <p>Use <code>/api/voices</code> to list available server-side voices for faster generation.</p>
+            <div id="noOutput" style="text-align: center; color: #999; padding: 40px 0; font-size: 0.9em;">
+                Generated audio will appear here
             </div>
         </div>
     </div>
@@ -524,11 +524,14 @@ async def read_root():
         async function loadVoices() {
             try {
                 const response = await fetch('/api/voices');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 const data = await response.json();
                 const voiceSelect = document.getElementById('voiceSelect');
-                voiceSelect.innerHTML = '<option value="">None (use uploaded file)</option>';
                 
                 if (data.voices && data.voices.length > 0) {
+                    voiceSelect.innerHTML = '<option value="">None (use uploaded file)</option>';
                     data.voices.forEach(voice => {
                         const option = document.createElement('option');
                         option.value = voice;
@@ -540,7 +543,8 @@ async def read_root():
                 }
             } catch (err) {
                 console.error('Failed to load voices:', err);
-                document.getElementById('voiceSelect').innerHTML = '<option value="">Error loading voices</option>';
+                const voiceSelect = document.getElementById('voiceSelect');
+                voiceSelect.innerHTML = '<option value="">Error loading voices - check console</option>';
             }
         }
         
@@ -591,19 +595,6 @@ async def read_root():
             document.getElementById('seedValue').textContent = e.target.value;
         });
         
-        function toggleTagsAccordion() {
-            const content = document.getElementById('tagsAccordionContent');
-            const icon = document.getElementById('tagsAccordionIcon');
-            content.classList.toggle('active');
-            icon.textContent = content.classList.contains('active') ? '▲' : '▼';
-        }
-        
-        function toggleAccordion() {
-            const content = document.getElementById('accordionContent');
-            const icon = document.getElementById('accordionIcon');
-            content.classList.toggle('active');
-            icon.textContent = content.classList.contains('active') ? '▲' : '▼';
-        }
         
         // Form submission
         document.getElementById('ttsForm').addEventListener('submit', async (e) => {
@@ -630,14 +621,15 @@ async def read_root():
                     const uploadData = new FormData();
                     uploadData.append('text', formData.get('text'));
                     uploadData.append('audio_file', audioFile);
-                    uploadData.append('temperature', formData.get('temperature'));
-                    uploadData.append('top_p', formData.get('top_p'));
-                    uploadData.append('top_k', formData.get('top_k'));
-                    uploadData.append('repetition_penalty', formData.get('repetition_penalty'));
-                    uploadData.append('min_p', formData.get('min_p'));
-                    uploadData.append('norm_loudness', formData.get('norm_loudness') ? 'true' : 'false');
+                    uploadData.append('temperature', parseFloat(formData.get('temperature') || '0.8').toString());
+                    uploadData.append('top_p', parseFloat(formData.get('top_p') || '0.95').toString());
+                    uploadData.append('top_k', parseInt(formData.get('top_k') || '1000').toString());
+                    uploadData.append('repetition_penalty', parseFloat(formData.get('repetition_penalty') || '1.2').toString());
+                    uploadData.append('min_p', parseFloat(formData.get('min_p') || '0.0').toString());
+                    const normLoudness = formData.get('norm_loudness');
+                    uploadData.append('norm_loudness', normLoudness === 'on' || normLoudness === 'true' ? 'true' : 'false');
                     const seed = formData.get('seed');
-                    if (seed && seed !== '0') uploadData.append('seed', seed);
+                    if (seed && seed !== '0') uploadData.append('seed', parseInt(seed).toString());
                     
                     response = await fetch('/api/tts/upload', {
                         method: 'POST',
@@ -648,14 +640,15 @@ async def read_root():
                     const uploadData = new FormData();
                     uploadData.append('text', formData.get('text'));
                     uploadData.append('voice_name', voiceName);
-                    uploadData.append('temperature', formData.get('temperature'));
-                    uploadData.append('top_p', formData.get('top_p'));
-                    uploadData.append('top_k', formData.get('top_k'));
-                    uploadData.append('repetition_penalty', formData.get('repetition_penalty'));
-                    uploadData.append('min_p', formData.get('min_p'));
-                    uploadData.append('norm_loudness', formData.get('norm_loudness') ? 'true' : 'false');
+                    uploadData.append('temperature', parseFloat(formData.get('temperature') || '0.8').toString());
+                    uploadData.append('top_p', parseFloat(formData.get('top_p') || '0.95').toString());
+                    uploadData.append('top_k', parseInt(formData.get('top_k') || '1000').toString());
+                    uploadData.append('repetition_penalty', parseFloat(formData.get('repetition_penalty') || '1.2').toString());
+                    uploadData.append('min_p', parseFloat(formData.get('min_p') || '0.0').toString());
+                    const normLoudness = formData.get('norm_loudness');
+                    uploadData.append('norm_loudness', normLoudness === 'on' || normLoudness === 'true' ? 'true' : 'false');
                     const seed = formData.get('seed');
-                    if (seed && seed !== '0') uploadData.append('seed', seed);
+                    if (seed && seed !== '0') uploadData.append('seed', parseInt(seed).toString());
                     
                     response = await fetch('/api/tts/upload', {
                         method: 'POST',
@@ -684,8 +677,21 @@ async def read_root():
                 }
                 
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || 'Generation failed');
+                    let errorMessage = 'Generation failed';
+                    try {
+                        const errorData = await response.json();
+                        // FastAPI validation errors (422) return detail as array
+                        if (Array.isArray(errorData.detail)) {
+                            errorMessage = errorData.detail.map(e => e.msg || e.loc?.join('.') || JSON.stringify(e)).join(', ');
+                        } else if (errorData.detail) {
+                            errorMessage = typeof errorData.detail === 'string' ? errorData.detail : JSON.stringify(errorData.detail);
+                        } else if (errorData.message) {
+                            errorMessage = errorData.message;
+                        }
+                    } catch (parseErr) {
+                        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                    }
+                    throw new Error(errorMessage);
                 }
                 
                 const blob = await response.blob();
@@ -693,9 +699,10 @@ async def read_root():
                 document.getElementById('audioPlayer').src = url;
                 document.getElementById('downloadLink').href = url;
                 document.getElementById('downloadLink').download = 'output.wav';
+                document.getElementById('noOutput').style.display = 'none';
                 audioOutput.style.display = 'block';
             } catch (err) {
-                error.textContent = 'Error: ' + err.message;
+                error.textContent = 'Error: ' + (err.message || String(err));
                 error.classList.add('active');
             } finally {
                 loading.classList.remove('active');
