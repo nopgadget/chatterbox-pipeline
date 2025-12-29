@@ -799,17 +799,20 @@ async def generate_tts_upload(
         
         # Priority: uploaded file > voice_name > None
         audio_prompt_path = None
+        is_temporary_file = False  # Track if we created a temp file that needs cleanup
         if audio_file:
             # Save uploaded file temporarily if provided
             with tempfile.NamedTemporaryFile(delete=False, suffix=Path(audio_file.filename).suffix) as tmp_file:
                 content = await audio_file.read()
                 tmp_file.write(content)
                 audio_prompt_path = tmp_file.name
+                is_temporary_file = True  # Mark as temporary so we can safely delete it
         elif voice_name:
             # Use server-side voice if no file uploaded
             audio_prompt_path = resolve_voice_path(voice_name, None)
             if not audio_prompt_path:
                 raise HTTPException(status_code=404, detail=f"Voice '{voice_name}' not found. Use /api/voices to list available voices.")
+            # Don't mark as temporary - this is a file from voice/ folder, never delete it!
         
         try:
             wav = model.generate(
@@ -840,8 +843,8 @@ async def generate_tts_upload(
                 }
             )
         finally:
-            # Clean up temporary file
-            if audio_prompt_path and os.path.exists(audio_prompt_path):
+            # Only clean up temporary files (uploaded files), NEVER delete files from voice/ folder
+            if is_temporary_file and audio_prompt_path and os.path.exists(audio_prompt_path):
                 os.unlink(audio_prompt_path)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
